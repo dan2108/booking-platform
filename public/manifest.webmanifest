@@ -1,0 +1,10 @@
+{
+  "name": "Sharp & Sons",
+  "short_name": "Sharp & Sons",
+  "description": "Appointment booking for Sharp & Sons barbers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121114",
+  "theme_color": "#121114",
+  "orientation": "portrait"
+}

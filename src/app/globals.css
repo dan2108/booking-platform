@@ -1,0 +1,245 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   Sharp & Sons — design system
+
+   Heritage barbering, not startup SaaS. Warm charcoal ground, bone paper,
+   oxblood for anything that commits you to something, brass for warnings.
+   Times and money are set in a monospace so the calendar reads like an
+   instrument panel rather than a web form.
+   ========================================================================== */
+
+@theme {
+  --color-ink:      #121114;
+  --color-ink-2:    #1a181d;
+  --color-ink-3:    #262229;
+  --color-ink-4:    #38323c;
+
+  --color-bone:     #f4f1ea;
+  --color-bone-2:   #e9e4d8;
+  --color-bone-3:   #d9d2c2;
+
+  --color-oxblood:      #9e2b3c;
+  --color-oxblood-lo:   #7a1f2d;
+  --color-oxblood-hi:   #c2455a;
+
+  --color-brass:    #c39a3f;
+  --color-brass-lo: #8f6f24;
+  --color-jade:     #2f7d5f;
+  --color-jade-hi:  #4aa87f;
+
+  --color-muted:    #8c8477;
+  --color-muted-2:  #605a52;
+
+  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --font-body:    'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: var(--color-ink);
+    color: var(--color-bone);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--color-oxblood);
+    color: var(--color-bone);
+  }
+
+  /* Paper surfaces flip the whole palette rather than tinting it. */
+  .paper {
+    background: var(--color-bone);
+    color: var(--color-ink);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer components {
+  /* ---------------------------------------------------------- structure -- */
+
+  .grain::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* The barber-pole hairline. Used as a top rule on every surface. */
+  .pole-rule {
+    height: 3px;
+    background: repeating-linear-gradient(
+      115deg,
+      var(--color-oxblood) 0 10px,
+      var(--color-bone-2) 10px 20px,
+      var(--color-ink-3) 20px 30px
+    );
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* ------------------------------------------------------------ controls -- */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    transition: transform 0.12s ease, background 0.18s ease, color 0.18s ease,
+      border-color 0.18s ease;
+    cursor: pointer;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-primary {
+    background: var(--color-oxblood);
+    color: var(--color-bone);
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--color-oxblood-hi); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-bone);
+    border-color: var(--color-ink-4);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    border-color: var(--color-bone-3);
+    background: var(--color-ink-2);
+  }
+
+  .btn-paper {
+    background: var(--color-ink);
+    color: var(--color-bone);
+  }
+  .btn-paper:hover:not(:disabled) { background: var(--color-ink-3); }
+
+  .field {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: transparent;
+    border: 1px solid var(--color-bone-3);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .field::placeholder { color: var(--color-muted); }
+  .field:focus {
+    border-color: var(--color-oxblood);
+    box-shadow: inset 0 -2px 0 var(--color-oxblood);
+  }
+
+  /* ------------------------------------------------------------- pieces -- */
+
+  .card-dark {
+    background: var(--color-ink-2);
+    border: 1px solid var(--color-ink-3);
+  }
+
+  .slot {
+    padding: 0.75rem 0.25rem;
+    border: 1px solid var(--color-bone-3);
+    background: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: all 0.14s ease;
+  }
+  .slot:hover:not(:disabled) {
+    border-color: var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-bone);
+  }
+  .slot[data-selected='true'] {
+    background: var(--color-oxblood);
+    border-color: var(--color-oxblood);
+    color: var(--color-bone);
+  }
+  .slot:disabled {
+    color: var(--color-bone-3);
+    border-color: var(--color-bone-2);
+    cursor: not-allowed;
+    text-decoration: line-through;
+  }
+
+  /* Status accents on the staff timeline. A left bar reads faster than a
+     coloured pill when you are glancing at a phone mid-cut. */
+  .appt { border-left: 3px solid var(--color-ink-4); }
+  .appt-booked      { border-left-color: var(--color-muted-2); }
+  .appt-in_progress { border-left-color: var(--color-jade-hi); }
+  .appt-completed   { border-left-color: var(--color-ink-4); }
+  .appt-no_show     { border-left-color: var(--color-oxblood); }
+  .appt-at-risk     { border-left-color: var(--color-brass); }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.1875rem 0.4375rem;
+    border: 1px solid currentColor;
+    line-height: 1.1;
+  }
+}
+
+@layer utilities {
+  /* One orchestrated page-load reveal beats scattered micro-interactions. */
+  .reveal {
+    animation: reveal 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .pulse-jade { animation: pulseJade 2s ease-in-out infinite; }
+  @keyframes pulseJade {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.45; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .pulse-jade { animation: none !important; }
+    * { transition-duration: 0.01ms !important; }
+  }
+
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+}

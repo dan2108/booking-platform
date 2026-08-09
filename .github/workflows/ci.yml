@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    # The integration suite runs against a real Postgres, because the
+    # correctness core IS a Postgres feature. Testing it against a mock would
+    # test the mock.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests (pure functions, no database)
+        run: pnpm test:unit
+
+      - name: Apply migrations to a clean database
+        # PLAN.md Layer 1 definition of done: "migrations apply to a clean
+        # database". This step failing IS that check failing.
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql -h localhost -p 5433 -U postgres -c 'create database booking'
+          psql -v ON_ERROR_STOP=1 -q -h localhost -p 5433 -U postgres -d booking \
+            -f scripts/local-bootstrap.sql
+          for f in supabase/migrations/*.sql; do
+            echo "applying $f"
+            psql -v ON_ERROR_STOP=1 -q -h localhost -p 5433 -U postgres -d booking -f "$f"
+          done
+          psql -q -h localhost -p 5433 -U postgres -d booking -c 'select seed_demo_data();'
+
+      - name: Integration tests (real concurrency)
+        run: pnpm test:db
+        env:
+          TEST_DATABASE_URL: postgres://postgres@localhost:5433/booking
+
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-time-placeholder
