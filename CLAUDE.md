@@ -82,8 +82,14 @@ Global baseline (`~/.claude/CLAUDE.md`) applies. On top of that:
 
 1. **Staff auth** — replace the demo role switcher with Supabase Auth. The RLS policies
    are already written and tested against real personas; this is wiring, not redesign.
-2. **Revoke the `anon` grant on `reserve()`** once the service-role key is in the
-   deployment environment.
+2. **Reconcile the live database with these migrations, then decide the key
+   policy.** Verified 2026-08-10: the repo revokes execute on `reserve()` from
+   `anon` (0004), but the live demo project has it granted — so a fresh deploy
+   from this repo has a booking flow that dies at the confirm tap while the demo
+   database works fine. The repo is not currently the truth about the database.
+   Fix the drift first (grant it in a migration and label it demo-only, or revoke
+   it live and require `SUPABASE_SERVICE_ROLE_KEY`), then decide the real policy
+   before any public URL. See `docs/ARCHITECTURE.md` gap 2.
 3. **Layer 6 — notifications** behind `NotificationPort`. Email first (near-free), SMS
    after, with per-message cost logging and a spend cap.
 4. **Fresha export scoping.** On the critical path: the pilot shop is a Fresha shop and

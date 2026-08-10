@@ -223,7 +223,7 @@ No, and say so plainly.
 
 **Built and proved:** the reservation guarantee, multi-shop tenancy enforced in
 the database, availability from real variable rotas, the public booking flow,
-the barber's phone, the manager rota editor, head-office reporting. 47 tests
+the barber's phone, the manager rota editor, head-office reporting. 48 tests
 including a real concurrent race.
 
 **Not built:** SMS and email notifications (adapter layer designed, not

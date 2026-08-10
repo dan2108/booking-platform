@@ -2,10 +2,11 @@
 
 ## 1. Create `.env.local` (once)
 
-Only one value actually has to be set: the Supabase **service-role key**, which
-unlocks the staff, manager and head-office surfaces. The two public values have
-defaults compiled into `src/lib/supabase/config.ts`, so the booking flow runs
-without them.
+Only one value has to be set: the Supabase **service-role key**. It unlocks the
+staff, manager and head-office surfaces, and you want it set for public booking
+too — see the note in §3, which is less obvious than it looks. The two public
+values have defaults compiled into `src/lib/supabase/config.ts`, so those need no
+setting.
 
 In PowerShell, from this folder — paste your `sb_secret_...` key in place of the
 placeholder:
@@ -51,11 +52,20 @@ npx vercel --prod
 
 That prints a live URL.
 
-**Do the `env add` step before `--prod`.** Without it the deploy still works and
-public booking is fine, but the staff, manager and head-office pages will
-correctly refuse to render — Row-Level Security will not serve appointments or
-client records to a public key, which is the entire point of the tenancy model.
-Those pages show an explanatory notice rather than an error.
+**Do the `env add` step before `--prod`.** The staff, manager and head-office
+pages cannot read appointments or client records without it — they show an
+explanatory notice rather than an error, which *is* the tenancy model working.
+
+**Public booking is the subtle one. Set the key for that too.** Against the
+current live demo project it happens to work without it, because `reserve()` was
+granted to the public role there outside the migrations. Against a database built
+from `supabase/migrations/` it does **not**: 0004 revokes that grant, so the
+booking page renders, offers real slots, and then fails at the confirm tap with
+"Something went wrong on our side."
+
+That difference is unresolved drift (see `docs/ARCHITECTURE.md` gap 2), so do not
+rely on which side of it you are standing on. With the key set, both behave the
+same and public booking works either way.
 
 ## 4. Rotate the key when the demo is done
 

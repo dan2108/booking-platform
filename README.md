@@ -23,7 +23,7 @@ pnpm dev
 | `docs/DEMO.md` | Run sheet for demoing it. |
 | `supabase/migrations/` | The schema, the guarantee, the RLS policies, the seed. |
 | `src/lib/availability.ts` | Rota expansion and slot generation. Pure functions. |
-| `tests/` | 47 tests, including a real 12-connection concurrent race. |
+| `tests/` | 48 tests, including a real 12-connection concurrent race. |
 
 ## The one thing worth reading
 
@@ -36,7 +36,7 @@ but because the database cannot hold the second row.
 ```bash
 pnpm dev          # development server
 pnpm build        # production build
-pnpm test         # all 47 tests
+pnpm test         # all 48 tests
 pnpm test:unit    # pure functions only, no database needed
 pnpm db:up        # local Postgres from migrations + seed (no cloud account)
 pnpm test:db      # integration tests, real concurrency
