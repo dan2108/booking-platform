@@ -193,6 +193,75 @@ describe('the guarantee, under genuine concurrency', () => {
     ]);
   });
 
+  /**
+   * Regression test for the deadlock fixed in migration 0009.
+   *
+   * The single-round race above passes most of the time even with the bug,
+   * which is exactly why the bug survived: it is a ~15% per-round flake. This
+   * repeats the race so the suite actually fails when reserve() can raise
+   * instead of returning a structured result.
+   *
+   * Two separate assertions, and the difference matters:
+   *   - exactly one winner per round  -> THE GUARANTEE. Held even before 0009.
+   *   - no thrown exceptions          -> the FAILURE MODE. This is what broke.
+   *
+   * Distinct mobiles on purpose: sharing one mobile serialises the racers on
+   * that client row and hides the deadlock entirely.
+   */
+  it('never raises instead of returning a result, over repeated races', async () => {
+    const ROUNDS = 6;
+    const RACERS = 12;
+    const raised: string[] = [];
+
+    for (let round = 0; round < ROUNDS; round++) {
+      const slot = await freeSlot(ctx.barberId);
+      const conns = await Promise.all(
+        Array.from({ length: RACERS }, async () => {
+          const c = new Client({ connectionString: CONN });
+          await c.connect();
+          return c;
+        })
+      );
+
+      try {
+        const results = await Promise.all(
+          conns.map((c, i) =>
+            c
+              .query(reserveSql, [
+                ctx.shopId,
+                ctx.barberId,
+                ctx.serviceId,
+                slot,
+                i % 2 === 0 ? 'online' : 'staff',
+                `Flake ${round}-${i}`,
+                `+4477009008${String(i).padStart(2, '0')}`,
+                30,
+              ])
+              .then((r) => r.rows[0].r as Reserved)
+              .catch((e: Error & { code?: string }) => {
+                raised.push(`${e.code}: ${e.message}`);
+                return { ok: false, code: 'threw', message: e.message } as Reserved;
+              })
+          )
+        );
+
+        expect(results.filter((r) => r.ok)).toHaveLength(1);
+      } finally {
+        await Promise.all(conns.map((c) => c.end()));
+        await pool.query(`delete from appointments where barber_id = $1 and starts_at = $2`, [
+          ctx.barberId,
+          slot,
+        ]);
+        await pool.query(`delete from clients where mobile like '+4477009008%'`);
+      }
+    }
+
+    // Losing a race is a structured 'slot_taken', never an exception. A
+    // deadlock victim chosen arbitrarily by the database must not become a
+    // lost booking (CLAUDE.md non-negotiable #2).
+    expect(raised).toEqual([]);
+  }, 60_000);
+
   it('lets two barbers hold the same time as each other', async () => {
     const slot = await freeSlot(ctx.barberId);
     const a = await reserve({ startsAt: slot, mobile: '+447700900993' });

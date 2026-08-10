@@ -77,6 +77,18 @@ It returns a **structured result** rather than throwing on expected failures:
 a race is a correct outcome, not an error. Anything genuinely unexpected still
 raises and surfaces.
 
+Callers racing for the *same* barber-time serialise on a transaction-scoped
+advisory lock before touching any row (migration 0009). That is not a second
+guarantee and must not be read as one — the exclusion constraint is still the
+only thing making a double booking impossible. It fixes how a **loss** is
+reported. Without it, two transactions could each insert a GiST index entry,
+each find the other's uncommitted entry, and deadlock; Postgres then aborts one
+arbitrarily — possibly the one that should have won — and `reserve()` raised
+instead of returning `slot_taken`. Measured at ~15% of eight-way races before
+the fix. An earlier attempt to retry on deadlock made it *worse* (sleeping while
+holding locks turned deadlocks into a 60-second pile-up); lock ordering is the
+fix, retry was not.
+
 One subtlety worth knowing about: client dedupe on mobile is a single atomic
 upsert, not select-then-insert. Two reservations arriving at the same instant
 for the same *new* number — a client double-tapping confirm — otherwise both
@@ -132,11 +144,17 @@ pnpm db:up       # local Postgres + migrations + seed
 pnpm test:db     # integration, real concurrency
 ```
 
-47 tests. The ones that matter:
+48 tests. The ones that matter:
 
 - **12 simultaneous reservations on 12 separate connections** for one slot.
   Exactly one commits; the other 11 get `slot_taken`; the database holds one
   row. This is the guarantee proved the only honest way.
+- **The same race, repeated.** A single round passes ~85% of the time even with
+  a concurrency bug present, which is exactly how the deadlock in the paragraph
+  above survived. The repeated version asserts two different things: one winner
+  per round (the guarantee — which never broke) and *no raised exceptions* (the
+  failure mode — which did). Run the suite in a loop before trusting it; a
+  concurrency test that only runs once is a coin toss.
 - Live overrun is permitted and flags the next appointment.
 - Cancelling frees the slot immediately.
 - Deny-path RLS for every persona, including *no role can insert directly*.
@@ -177,10 +195,35 @@ Honest list. Nothing here is hidden in a footnote.
 1. **Staff auth is a role switcher, not a login.** The RLS policies are real and
    tested against real personas; the demo picks an identity rather than
    authenticating one. Wiring Supabase Auth is a small job, not a redesign.
-2. **`reserve()` is currently granted to `anon`** so the demo runs on public
-   keys alone. With the service-role key wired in, revoke it — the browser then
-   has no path to the function at all. Validation, the constraint and the
-   absence of INSERT policies are unaffected either way.
+2. **The live demo database does not match these migrations.** Verified
+   2026-08-10 against `booking-platform-demo`, not inferred:
+
+   - **In this repo:** migration 0004 revokes execute on `reserve()` from
+     `public` and `anon`, and nothing grants it back. Migration 0008 makes only
+     the *reads* public. So a database built from these migrations renders the
+     booking page, offers real slots, and then **fails at the confirm tap**
+     unless the server holds `SUPABASE_SERVICE_ROLE_KEY`. It looks completely
+     functional right up to the last step.
+   - **On the live project:** `reserve()` *is* callable by the publishable key.
+     A POST to `/rest/v1/rpc/reserve` with the publishable key returns 200 and a
+     structured result. Someone granted it outside these migrations.
+
+   The drift is the finding, not either half of it. **A fresh deploy from this
+   repo does not behave like the database the demo runs on**, and rebuilding the
+   live project from these migrations would silently break public booking.
+
+   Two things to decide, and they are separate:
+   - *Reconcile:* either add a migration granting `anon` execute and label it
+     demo-only, or revoke it on the live project and require the key. Whichever
+     — the repo must become the truth about the database.
+   - *Then decide the real policy:* for a public URL with real clients, the key
+     should be required and should fail at boot rather than at the confirm tap.
+
+   `src/lib/supabase/server.ts` and `src/components/KeyNotice.tsx` both claim
+   public booking works on the publishable key. That is currently true of the
+   live project and false of this repo, which is exactly the confusion the drift
+   creates. Not yet corrected, because the correct wording depends on the
+   decision above.
 3. **No notifications.** `NotificationPort` is designed (PLAN.md Layer 6) and
    not built. No confirmations, no reminders, no win-back.
 4. **No Fresha import.** On the critical path, because the pilot shop's clients
